@@ -89,7 +89,7 @@ def make_index(themes):
     for theme in themes:
         check_output(output / theme["slug"])
     cards = "\n".join(
-        f'<li><a href="./{t["slug"]}/"><h2>{html.escape(t["name"])}</h2>'
+        f'<li><a class="theme-card" href="./{t["slug"]}/"><h2>{html.escape(t["name"])}</h2>'
         f'<p>{html.escape(t["description"])}</p><span>View demo →</span></a></li>'
         for t in themes
     )
@@ -100,13 +100,40 @@ def make_index(themes):
 :root{color-scheme:light dark;font:18px/1.6 system-ui,sans-serif;background:#f7f4ed;color:#252521}
 body{max-width:900px;margin:8vh auto;padding:24px}h1{font:clamp(2.5rem,7vw,4rem)/1.1 Georgia,serif}
 .eyebrow,span{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase}ul{list-style:none;padding:0}
-li{margin:32px 0}a{display:block;color:inherit;text-decoration:none;border:1px solid #b3afa2;padding:28px}
-a:hover,a:focus-visible{border-color:currentColor;background:#ede9df}h2{margin:0;font:2rem Georgia,serif}
+li{margin:32px 0}a{color:inherit;text-underline-offset:.18em}
+.theme-card{display:block;text-decoration:none;border:1px solid #b3afa2;padding:28px}
+.theme-card:hover,.theme-card:focus-visible{border-color:currentColor;background:#ede9df}h2{margin:0;font:2rem Georgia,serif}
+section{margin-top:44px;border-top:1px solid #b3afa2;padding-top:32px}section h2{font-size:1.7rem}
+pre{overflow-x:auto;border:1px solid #b3afa2;padding:20px;font-size:.8rem;line-height:1.7}
+code{font-family:ui-monospace,monospace}p code{font-size:.85em}
 p{max-width:640px}footer{margin-top:60px;font-size:.8rem;color:#67675e}
-@media(prefers-color-scheme:dark){:root{background:#22231f;color:#eeeade}a:hover,a:focus-visible{background:#30322b}footer{color:#b3afa2}}
+@media(prefers-color-scheme:dark){:root{background:#22231f;color:#eeeade}.theme-card:hover,.theme-card:focus-visible{background:#30322b}footer{color:#b3afa2}}
 </style></head><body><p class="eyebrow">Hugo themes</p>
-<h1>Themes in development.</h1><p>Explore the example sites. These demos follow the latest development versions.</p>
-<ul>""" + cards + """</ul><footer>Built with Hugo and published with GitHub Actions.</footer></body></html>
+<h1>Themes in development.</h1>
+<p>Explore the example sites built with <a href="https://gohugo.io/">Hugo</a>.
+These demos follow the latest development versions. Read Hugo's
+<a href="https://gohugo.io/getting-started/usage/">usage documentation</a> and
+<a href="https://gohugo.io/documentation/">full documentation</a>, or follow the
+<a href="#local-use">local setup instructions</a> to try a theme with a public repository.</p>
+<ul>""" + cards + """</ul>
+<section id="local-use" aria-labelledby="local-use-heading">
+<h2 id="local-use-heading">Try a public theme locally</h2>
+<p><a href="https://gohugo.io/installation/">Install Hugo</a> and Git first.
+Check the theme's README for its required Hugo version, whether it needs Hugo Extended,
+and any additional setup. The commands below assume the theme provides an <code>exampleSite</code> directory.</p>
+<p>Replace <code>OWNER</code> and <code>THEME_REPO</code> with the public GitHub repository's
+owner and name. Keep the checkout directory named <code>THEME_REPO</code>:</p>
+<pre><code>git clone --recurse-submodules https://github.com/OWNER/THEME_REPO.git THEME_REPO
+cd THEME_REPO
+hugo server --source exampleSite --themesDir ../.. --theme THEME_REPO</code></pre>
+<p>Open the local address Hugo prints, usually <code>http://localhost:1313/</code>.
+Edit the example site's content or configuration to experiment; Hugo refreshes the preview
+as you save. Press <code>Ctrl+C</code> in the terminal to stop the server.</p>
+<p>To use a theme in your own site, follow the
+<a href="https://gohugo.io/getting-started/quick-start/">Hugo quick start</a>
+and the theme's README for installation and configuration.</p>
+</section>
+<footer>Built with Hugo and published with GitHub Actions.</footer></body></html>
 """)
     (output / ".nojekyll").touch()
     check_output(output)
