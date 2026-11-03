@@ -104,7 +104,7 @@ li{margin:32px 0}a{display:block;color:inherit;text-decoration:none;border:1px s
 a:hover,a:focus-visible{border-color:currentColor;background:#ede9df}h2{margin:0;font:2rem Georgia,serif}
 p{max-width:640px}footer{margin-top:60px;font-size:.8rem;color:#67675e}
 @media(prefers-color-scheme:dark){:root{background:#22231f;color:#eeeade}a:hover,a:focus-visible{background:#30322b}footer{color:#b3afa2}}
-</style></head><body><p class="eyebrow">James Tooze · Hugo themes</p>
+</style></head><body><p class="eyebrow">Hugo themes</p>
 <h1>Themes in development.</h1><p>Explore the example sites. These demos follow the latest development versions.</p>
 <ul>""" + cards + """</ul><footer>Built with Hugo and published with GitHub Actions.</footer></body></html>
 """)
