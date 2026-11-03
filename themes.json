@@ -1,0 +1,13 @@
+[
+  {
+    "slug": "folio",
+    "name": "Folio",
+    "description": "A quiet photography portfolio with print-inspired presentation.",
+    "repository": "toozej/hugo-theme-folio",
+    "ref": "main",
+    "example_site": "exampleSite",
+    "theme": "hugo-theme-folio",
+    "hugo_version": "0.158.0",
+    "ssh_key_secret": "FOLIO_DEPLOY_KEY"
+  }
+]
