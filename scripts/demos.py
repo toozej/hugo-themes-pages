@@ -6,6 +6,7 @@ import html
 import json
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import subprocess
 import sys
 from urllib.parse import urlsplit
@@ -20,9 +21,11 @@ def load_themes():
     seen = set()
     required = {"slug", "name", "description", "repository", "ref", "example_site",
                 "theme", "hugo_version", "ssh_key_secret"}
+    optional = {"build_script"}
     for theme in themes:
-        if not isinstance(theme, dict) or set(theme) != required:
-            raise ValueError("Each theme must contain exactly the documented fields")
+        if (not isinstance(theme, dict) or not required <= set(theme)
+                or not set(theme) <= required | optional):
+            raise ValueError("Each theme must contain the documented required and optional fields")
         if any(not isinstance(value, str) or not value or "\n" in value or "\r" in value
                for value in theme.values()):
             raise ValueError("Theme fields must be nonempty single-line strings")
@@ -34,9 +37,14 @@ def load_themes():
             raise ValueError(f"Invalid repository for {slug}")
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", theme["theme"]):
             raise ValueError(f"Invalid theme directory for {slug}")
-        path = PurePosixPath(theme["example_site"])
-        if path.is_absolute() or ".." in path.parts or "\\" in str(path):
-            raise ValueError(f"example_site must stay inside the theme for {slug}")
+        for field in ("example_site", "build_script"):
+            if field not in theme:
+                continue
+            path = PurePosixPath(theme[field])
+            if path.is_absolute() or ".." in path.parts or "\\" in str(path):
+                raise ValueError(f"{field} must stay inside the theme for {slug}")
+            if field == "build_script" and path.suffix != ".py":
+                raise ValueError(f"build_script must name a Python file for {slug}")
         if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", theme["hugo_version"]):
             raise ValueError(f"Use an explicit Hugo version for {slug}")
         if not re.fullmatch(r"[A-Z][A-Z0-9_]*", theme["ssh_key_secret"]):
@@ -70,18 +78,35 @@ def build(themes, slug, base_url):
         raise ValueError("Example site is missing or outside the theme checkout")
     destination = ROOT / "_site" / slug
     destination.mkdir(parents=True, exist_ok=True)
-    command = ["hugo", "--source", str(source), "--themesDir", str(checkout.parent),
-               "--theme", theme["theme"], "--destination", str(destination),
-               "--baseURL", base_url.rstrip("/") + "/" + slug + "/",
-               "--environment", "production", "--cleanDestinationDir", "--minify"]
+    theme_url = base_url.rstrip("/") + "/" + slug + "/"
+    generated = destination
+    if "build_script" in theme:
+        script = (checkout / theme["build_script"]).resolve()
+        if not script.is_relative_to(checkout) or not script.is_file():
+            raise ValueError("Build script is missing or outside the theme checkout")
+        # Keep the wrapper's guarded public-* output inside its example site.
+        generated = source / "public-pages"
+        command = [sys.executable, str(script), "--source", str(source),
+                   "--destination", generated.name, "--base-url", theme_url, "--check"]
+    else:
+        command = ["hugo", "--source", str(source), "--themesDir", str(checkout.parent),
+                   "--theme", theme["theme"], "--destination", str(destination),
+                   "--baseURL", theme_url, "--environment", "production",
+                   "--cleanDestinationDir", "--minify"]
     # Template failures can contain private source excerpts. Never echo raw Hugo
     # diagnostics into this public repository's logs or upload them as artifacts.
     result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     if result.returncode:
         raise ValueError(f"Hugo build failed for {slug}. Reproduce locally using README.md; "
                          "private template diagnostics are intentionally omitted.")
+    if generated != destination:
+        check_output(generated)
+        if destination.is_symlink():
+            raise ValueError("Publication directory must not be a symlink")
+        shutil.rmtree(destination)
+        shutil.copytree(generated, destination)
     check_output(destination)
-    print(f"Built {slug} at {base_url.rstrip('/')}/{slug}/")
+    print(f"Built {slug} at {theme_url}")
 
 
 def make_index(themes):
