@@ -7,12 +7,15 @@ Build Hugo themes' `exampleSite` directories from private repositories and publi
 | Theme | Source | Demo |
 | --- | --- | --- |
 | Folio | `toozej/hugo-theme-folio` (private) | https://toozej.github.io/hugo-themes-pages/folio/ |
+| Folio Deluxe | `toozej/hugo-theme-folio-deluxe` (private) | https://toozej.github.io/hugo-themes-pages/folio-deluxe/ |
 
 ## How it works
 
 [`themes.json`](themes.json) is the theme list. GitHub Actions checks out each theme at its configured branch, tag, or commit, installs its pinned Hugo Extended version, and builds its example site with `baseURL` set to `https://toozej.github.io/hugo-themes-pages/<slug>/`.
 
 The builds run in parallel. A separate job collects only their generated `_site/<slug>/` directories, adds a demo index, and publishes one Pages artifact. Publication waits for every build to succeed; a failed theme build leaves the previous deployment intact.
+
+Folio Deluxe uses Hugo Extended 0.168.0 and its own `scripts/build.py` wrapper to remove non-WebP output and run the theme's link, image, font, robots, and accessibility checks before publishing. Its temporary `exampleSite/public-pages/` output stays in the checkout; only the checked static files are copied into `_site/folio-deluxe/`.
 
 Builds run on pushes to `main`, manually from **Actions → Build and deploy theme demos → Run workflow**, and hourly at minute 17 to pick up private theme changes. Scheduled runs may be delayed by GitHub. GitHub disables scheduled workflows in inactive public repositories after 60 days; push a change or re-enable the workflow in Actions if that happens. Pull requests validate only the public theme list and never check out private source or receive deploy keys.
 
@@ -29,6 +32,8 @@ Builds run on pushes to `main`, manually from **Actions → Build and deploy the
 
 3. Add the contents of `folio-demo` as an Actions repository secret named **`FOLIO_DEPLOY_KEY`** in **this public repository → Settings → Secrets and variables → Actions**. Never commit either private keys or theme checkouts. Once configured, keep the original key in a secure credential store or remove the local copy.
 4. Run the deployment workflow and open the demo URL above.
+
+Folio Deluxe uses a separate read-only deploy key registered in **toozej/hugo-theme-folio-deluxe → Settings → Deploy keys**. Store its private key in this repository's Actions secret **`FOLIO_DELUXE_DEPLOY_KEY`**. The original `FOLIO_DEPLOY_KEY` grants access only to Folio and cannot check out Deluxe.
 
 The public repository's default `GITHUB_TOKEN` cannot read an unrelated private repository. The deploy key supplies only that theme's Git read access; deployment uses the workflow's short-lived Pages token. No personal access token or write access to a private theme is needed.
 
@@ -60,8 +65,11 @@ Create its read-only deploy key and Actions secret, then append an entry to `the
 | `theme` | Checkout directory and Hugo theme name; match the theme's configuration. |
 | `hugo_version` | Exact Hugo Extended release used for this theme. |
 | `ssh_key_secret` | Name of this repository's Actions secret containing the private deploy key. |
+| `build_script` (optional) | Python build wrapper relative to the theme root, such as `scripts/build.py`. Without it, build directly with Hugo. |
 
-The example site must build directly with Hugo. If a future theme needs npm preprocessing, Hugo modules, submodules, or LFS, add those explicit setup steps before enabling it. Folio needs none of these.
+A `build_script` wrapper must accept `--source`, `--destination`, `--base-url`, and `--check`. It must generate a complete static site in `public-pages/` directly under the supplied example-site directory. The publisher captures its diagnostics to keep private template excerpts out of public logs, validates its output, and copies only the rendered files into `_site/<slug>/`.
+
+If a future theme needs npm preprocessing, Hugo modules, submodules, or LFS, add those explicit setup steps before enabling it. Folio and Folio Deluxe need none of these.
 
 ## Local build
 

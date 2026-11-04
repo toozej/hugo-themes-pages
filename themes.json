@@ -9,5 +9,17 @@
     "theme": "hugo-theme-folio",
     "hugo_version": "0.158.0",
     "ssh_key_secret": "FOLIO_DEPLOY_KEY"
+  },
+  {
+    "slug": "folio-deluxe",
+    "name": "Folio Deluxe",
+    "description": "Folio's photography portfolio with WebP images, mixed local and remote galleries, and a uses catalogue.",
+    "repository": "toozej/hugo-theme-folio-deluxe",
+    "ref": "main",
+    "example_site": "exampleSite",
+    "theme": "hugo-theme-folio-deluxe",
+    "hugo_version": "0.168.0",
+    "ssh_key_secret": "FOLIO_DELUXE_DEPLOY_KEY",
+    "build_script": "scripts/build.py"
   }
 ]
