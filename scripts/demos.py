@@ -52,6 +52,16 @@ def load_themes():
     return themes
 
 
+def validate_dispatch(themes, event_path):
+    event = json.loads(event_path.read_text())
+    payload = event.get("client_payload") if isinstance(event, dict) else None
+    if not isinstance(payload, dict) or payload.get("ref") != "refs/heads/main":
+        raise ValueError("Theme update events must identify refs/heads/main")
+    if not any(theme["repository"] == payload.get("repository")
+               and theme["ref"] == "main" for theme in themes):
+        raise ValueError("Theme update repository must follow main in themes.json")
+
+
 def check_output(directory):
     if not (directory / "index.html").is_file():
         raise ValueError(f"Missing generated index.html in {directory.name}")
@@ -169,6 +179,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("matrix")
+    dispatch = commands.add_parser("validate-dispatch")
+    dispatch.add_argument("event_path", type=Path)
     builder = commands.add_parser("build")
     builder.add_argument("slug")
     builder.add_argument("--base-url", required=True)
@@ -178,6 +190,8 @@ def main():
         themes = load_themes()
         if args.command == "matrix":
             print("themes=" + json.dumps(themes, separators=(",", ":")))
+        elif args.command == "validate-dispatch":
+            validate_dispatch(themes, args.event_path)
         elif args.command == "build":
             build(themes, args.slug, args.base_url)
         else:

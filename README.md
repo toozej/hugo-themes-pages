@@ -17,7 +17,9 @@ The builds run in parallel. A separate job collects only their generated `_site/
 
 Folio Deluxe uses Hugo Extended 0.168.0 and its own `scripts/build.py` wrapper to remove non-WebP output and run the theme's link, image, font, robots, and accessibility checks before publishing. Its temporary `exampleSite/public-pages/` output stays in the checkout; only the checked static files are copied into `_site/folio-deluxe/`.
 
-Builds run on pushes to `main`, manually from **Actions → Build and deploy theme demos → Run workflow**, and hourly at minute 17 to pick up private theme changes. Scheduled runs may be delayed by GitHub. GitHub disables scheduled workflows in inactive public repositories after 60 days; push a change or re-enable the workflow in Actions if that happens. Pull requests validate only the public theme list and never check out private source or receive deploy keys.
+Builds run when this repository receives a push to `main` or a `theme-updated` dispatch event. You can also start builds from **Actions → Build and deploy theme demos → Run workflow**. Each theme needs the sender workflow and token described below to report pushes to its `main` branch. Each accepted event rebuilds all themes at their configured refs and publishes the complete site. The workflow does not use the event payload to select a checkout ref.
+
+The hourly schedule at minute 17 retries missed theme updates. GitHub may delay scheduled runs. GitHub disables scheduled workflows in inactive public repositories after 60 days. Push a change or enable the workflow again in Actions if this occurs. Pull requests validate only the public theme list. They never check out private source or receive deploy keys.
 
 ## Initial setup
 
@@ -35,7 +37,20 @@ Builds run on pushes to `main`, manually from **Actions → Build and deploy the
 
 Folio Deluxe uses a separate read-only deploy key registered in **toozej/hugo-theme-folio-deluxe → Settings → Deploy keys**. Store its private key in this repository's Actions secret **`FOLIO_DELUXE_DEPLOY_KEY`**. The original `FOLIO_DEPLOY_KEY` grants access only to Folio and cannot check out Deluxe.
 
-The public repository's default `GITHUB_TOKEN` cannot read an unrelated private repository. The deploy key supplies only that theme's Git read access; deployment uses the workflow's short-lived Pages token. No personal access token or write access to a private theme is needed.
+The public repository's default `GITHUB_TOKEN` cannot read an unrelated private repository. Each deploy key supplies only that theme's Git read access. Deployment uses the workflow's short-lived Pages token. Theme push notifications use a separate token with write access only to this public repository. They do not need write access to a private theme.
+
+## Theme push triggers
+
+GitHub limits `push` triggers to the repository that contains the workflow. A push to a theme cannot directly start this repository's Pages workflow. Each theme must send a [`repository_dispatch` event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#repository_dispatch) instead.
+
+1. Commit the receiving Pages workflow to this repository's `main` branch. GitHub requires the receiver to exist on the default branch.
+2. Create a fine-grained personal access token for `toozej/hugo-themes-pages` only. Give it **Contents: Read and write**, as required by the [repository dispatch API](https://docs.github.com/en/rest/repos/repos#create-a-repository-dispatch-event). The theme repository's `GITHUB_TOKEN` cannot send events to another repository.
+3. Store the token as the Actions repository secret **`THEME_PAGES_DISPATCH_TOKEN`** in both `toozej/hugo-theme-folio` and `toozej/hugo-theme-folio-deluxe`.
+4. Copy [`examples/notify-pages.yml`](examples/notify-pages.yml) to `.github/workflows/notify-pages.yml` in each theme repository. Commit each sender workflow to that theme's `main` branch.
+
+Each sender runs on every push to `main`, including merges. It sends the theme repository, branch ref, and commit SHA. The receiver accepts only `refs/heads/main` from a repository that follows `main` in `themes.json`. Earlier pushes do not send events retroactively. Run the Pages workflow manually once to publish the current theme content.
+
+The notification workflow fails with an error if its secret is absent. Renew the token in both themes before it expires. The hourly schedule remains available if notifications fail.
 
 ## Add another theme
 
@@ -68,6 +83,8 @@ Create its read-only deploy key and Actions secret, then append an entry to `the
 | `build_script` (optional) | Python build wrapper relative to the theme root, such as `scripts/build.py`. Without it, build directly with Hugo. |
 
 A `build_script` wrapper must accept `--source`, `--destination`, `--base-url`, and `--check`. It must generate a complete static site in `public-pages/` directly under the supplied example-site directory. The publisher captures its diagnostics to keep private template excerpts out of public logs, validates its output, and copies only the rendered files into `_site/<slug>/`.
+
+For a theme that follows `main`, configure the [theme push trigger](#theme-push-triggers) in its repository too.
 
 If a future theme needs npm preprocessing, Hugo modules, submodules, or LFS, add those explicit setup steps before enabling it. Folio and Folio Deluxe need none of these.
 

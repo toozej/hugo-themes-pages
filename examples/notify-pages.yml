@@ -1,0 +1,32 @@
+name: Update theme demo
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  notify:
+    name: Notify theme Pages workflow
+    if: github.event.deleted == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send theme update event
+        env:
+          GH_TOKEN: ${{ secrets.THEME_PAGES_DISPATCH_TOKEN }}
+          THEME_REPOSITORY: ${{ github.repository }}
+          THEME_REF: ${{ github.ref }}
+          THEME_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::error::Add the THEME_PAGES_DISPATCH_TOKEN Actions secret. See https://github.com/toozej/hugo-themes-pages#theme-push-triggers."
+            exit 1
+          fi
+          gh api --method POST repos/toozej/hugo-themes-pages/dispatches \
+            -f event_type=theme-updated \
+            -f "client_payload[repository]=$THEME_REPOSITORY" \
+            -f "client_payload[ref]=$THEME_REF" \
+            -f "client_payload[sha]=$THEME_SHA"
